@@ -1,0 +1,3 @@
+graft schemas
+global-exclude *.pyc
+global-exclude __pycache__

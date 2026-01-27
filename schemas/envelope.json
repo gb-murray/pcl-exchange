@@ -4,6 +4,8 @@
   "title": "PCLActionEnvelope",
   "type": "object",
   "required": [
+    "@id",
+    "@type",
     "profile",
     "identifier",
     "dateCreated",
@@ -18,6 +20,15 @@
     "authz"
   ],
   "properties": {
+    "@id": {                 
+      "type": "string",
+      "description": "JSON-LD Node Identifier" 
+    },
+    "@type": {               
+      "type": "string",
+      "const": "PCLActionEnvelope",
+      "description": "JSON-LD Type Definition"
+    },
     "profile": {
       "type": "string",
       "format": "uri",
@@ -30,7 +41,7 @@
     "dateCreated": { "type": "string", "format": "date-time" },
     "sender": {
       "type": "string",
-      "oneOf": [
+      "anyOf": [
         { "pattern": "^https://ror\\.org/[0-9a-hjkmnp-z]{9}$" },
         { "pattern": "^https://orcid\\.org/\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$" },
         { "format": "uri" }
@@ -39,7 +50,7 @@
     },
     "receiver": {
       "type": "string",
-      "oneOf": [
+      "anyOf": [
         { "pattern": "^https://ror\\.org/[0-9a-hjkmnp-z]{9}$" },
         { "format": "uri" }
       ]
@@ -60,9 +71,17 @@
     },
     "contentRef": {
       "description": "Link to the content entity inside the RO-Crate graph or an external URI",
-      "oneOf": [
+      "anyOf": [
         { "type": "string", "pattern": "^#.+$" },
-        { "type": "string", "format": "uri" }
+        { "type": "string", "format": "uri" },
+        {
+            "type": "object",
+            "required": ["@id"],
+            "properties": {
+                "@id": { "type": "string" }
+            },
+            "additionalProperties": false
+        }
       ]
     },
     "contentDigest": {
@@ -108,7 +127,7 @@
     },
     "project": {
       "type": "string",
-      "oneOf": [
+      "anyOf": [
         { "pattern": "^doi:10\\.[0-9]{4,9}/\\S+$" },
         { "pattern": "^ark:/.+$" },
         { "format": "uri" }
@@ -116,14 +135,14 @@
     },
     "sample": {
       "type": "string",
-      "oneOf": [
+      "anyOf": [
         { "pattern": "^igsn:[A-Za-z0-9./:-]{5,}$" },
         { "format": "uri" }
       ]
     },
     "authz": {
       "description": "Authorization artifact",
-      "oneOf": [
+      "anyOf": [
         {
           "type": "object",
           "required": ["type", "jws"],

@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcl-exchange"
+version = "0.1.0"
+description = "PCL Exchange Protocol: A Python library for creating and validating PCL Action Envelopes."
+readme = "README.md"
+authors = [
+  { name = "HTMDEC", email = "info@htmdec.org" },
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "jwcrypto>=1.5",      
+    "rdflib>=6.0",         
+    "pyshacl>=0.20",       
+    "requests>=2.31",       
+    "jsonschema>=4.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/htmdec/pcl-exchange"
+"Bug Tracker" = "https://github.com/htmdec/pcl-exchange/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black",
+    "isort",
+    "build",
+    "twine"
+]
+
+[tool.setuptools]
+packages = ["pcl_exchange", "pcl_exchange.schemas"]
+
+[tool.setuptools.package-dir]
+"pcl_exchange" = "src/pcl_exchange"
+"pcl_exchange.schemas" = "schemas"
+
+[tool.setuptools.package-data]
+"pcl_exchange.schemas" = ["**/*.json", "**/*.ttl", "**/*.shacl"]
+
+# configuration for pytest
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+python_files = "test_*.py"
+
+[tool.isort]
+profile = "black"
+line_length = 88

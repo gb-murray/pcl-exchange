@@ -1,11 +1,14 @@
-name: Validate Schemas and Shapes
+name: PCL Exchange CI
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
-  validate:
+  # static validation job
+  validate-static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,14 +26,31 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install pyshacl
+      - name: Install Python dependencies
         run: pip install pyshacl rdflib
 
       - name: Validate JSON Schemas
         run: |
-          ajv validate -s schemas/envelope.json -d examples/pcl_action_crate_example.json --strict=false || true
-          ajv validate -s schemas/error.json -d <(echo '{"type":"https://w3id.org/pcl-profile/action/v1#Error","timestamp":"2025-01-01T00:00:00Z","code":"INVALID_ENVELOPE","reason":"demo"}') --strict=false
+          ajv validate -s src/pcl_exchange/schemas/envelope.json -d examples/pcl_action_crate_example.json --strict=false
+          ajv validate -s src/pcl_exchange/schemas/error.json -d <(echo '{"type":"https://w3id.org/pcl-profile/action/v1#Error","timestamp":"2025-01-01T00:00:00Z","code":"INVALID_ENVELOPE","reason":"demo"}') --strict=false
 
       - name: Validate SHACL
         run: |
-          python scripts/validate_shacl.py --data examples/pcl_action_crate_example.json --shapes shapes/measurement_request.ttl shapes/workflow_launch.ttl
+          python scripts/validate_shacl.py --data examples/pcl_action_crate_example.json --shapes src/pcl_exchange/schemas/shapes/measurement_request.ttl src/pcl_exchange/schemas/shapes/workflow_launch.ttl
+
+  # unit tests job
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Package
+        run: pip install -e ".[dev]"
+
+      - name: Run Pytest
+        run: pytest

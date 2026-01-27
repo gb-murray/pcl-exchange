@@ -1,14 +1,22 @@
-# General
-.DS_Store
-*.pyc
-__pycache__/
-*.log
-
-# Node/Yarn (if used downstream for tooling)
-node_modules/
+# Distribution / Packaging
+*.egg-info/
 dist/
+build/
+*.egg
 
-# Python virtual envs
-.venv/
-env/
+# Python Bytecode
+__pycache__/
+*.pyc
+
+# Virtual Environments
 venv/
+env/
+.env
+
+# Testing & IDEs
+.pytest_cache/
+.coverage
+htmlcov/
+.vscode/
+.idea/
+examples/*test*.py
