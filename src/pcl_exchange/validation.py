@@ -25,6 +25,10 @@ def get_schema_text(filename: str) -> str:
 def validate_structure(data: Dict, schema_filename: str = "envelope.json") -> Tuple[bool, Optional[str]]:
     """
     Validates the pure JSON structure against the JSON Schema.
+
+    Args:
+        data: The message as a dictionary.
+        schema_filename: Path to the schema file relative to the schemas package.
     
     Returns:
         (True, None) if valid
@@ -45,14 +49,15 @@ def validate_semantics(
     shape_filename: str = "shapes/measurement_request.ttl"
 ) -> Tuple[bool, str]:
     """
-    Validates the RDF semantics (the "meaning") using SHACL.
+    Validates the RDF semantics using SHACL.
     
     Args:
         data: The message as a Dict, JSON string, or existing RDFLib Graph.
         shape_filename: Path to the .ttl file relative to the schemas package.
     
     Returns:
-        (conforms, report_text)
+        (True, None) if valid
+        (False, error_message) if invalid
     """
     # convert input data to RDFLib Graph
     if isinstance(data, Graph):
@@ -81,7 +86,7 @@ def validate_semantics(
     shape_graph.parse(data=shape_text, format=fmt)
 
     # run validation
-    conforms, _, report_text = validate(
+    is_valid, _, error_message = validate(
         data_graph,
         shacl_graph=shape_graph,
         inference='rdfs',
@@ -89,4 +94,4 @@ def validate_semantics(
         advanced=True
     )
     
-    return conforms, report_text
+    return is_valid, error_message

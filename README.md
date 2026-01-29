@@ -128,23 +128,76 @@ The payload itself, typically one of the following:
 
 --
 
-## Minimal JSON-LD Sketch
-
-*(Reflective: Trying to be compact and start the idea. More or less the same pattern for data registration or workflow launch.)*
+## Example PCL Exchange Message (JSON-LD)
 
 ```json
 {
-  "@context": "https://w3id.org/ro/crate/1.1/context",
-  "@type": "PCLActionEnvelope",
-  "id": "urn:uuid:1234",
-  "sender": "https://ror.org/03yrm5c26",
-  "receiver": "https://ror.org/05fm5zp12",
-  "action": "request_measurement",
-  "content": {
-    "@type": "Action",
-    "instrument": "PIDInst:12345",
-    "sample": "IGSN:XYZ123",
-    "method": "ASTM E112",
-    "parameters": { "load": { "value": 100, "unit": "N" } }
+  "@context": [
+    "https://w3id.org/ro/crate/1.1/context",
+    {
+      "prov": "http://www.w3.org/ns/prov#",
+      "qudt": "http://qudt.org/schema/qudt/",
+      "parameter": "http://schema.org/parameter",
+      "unitText": "http://schema.org/unitText"
+    }
+  ],
+  "@graph": [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      "about": { "@id": "./" },
+      "conformsTo": { "@id": "https://w3id.org/ro/crate/1.1" },
+      "identifier": "ro-crate-metadata.json",
+      "name": "RO-Crate Metadata",
+      "text": "Metadata descriptor for PCL Exchange"
+    },
+    {
+      "@id": "./",
+      "@type": "Dataset",
+      "hasPart": [
+        { "@id": "#envelope" },
+        { "@id": "#content" }
+      ]
+    },
+    {
+      "@id": "#envelope",
+      "@type": "PCLActionEnvelope",
+      "profile": "https://w3id.org/pcl-profile/action/v1",
+      "schema": "https://w3id.org/pcl-schema/measure-request/v1.0",
+      "identifier": "urn:uuid:6fc2f305-ce1e-4059-890d-428428b979dd",
+      "dateCreated": "2026-01-29T16:10:49.713657Z",
+      "sender": "https://ror.org/03yrm5c26",
+      "receiver": "https://ror.org/01bj3aw27",
+      "action": "request_measurement",
+      "capabilities": ["xrd.powder.theta-2theta"],
+      "project": "doi:10.1234/placeholder",
+      "sample": "igsn:XYZ12345",
+      "contentRef": { "@id": "#content" },
+      "authz": {
+        "type": "DetachedJWS",
+        "jws": "eyJhbGciOiJFZERTQSJ9..[SIGNATURE_GOES_HERE]"
+      }
+    },
+    {
+      "@id": "#content",
+      "@type": "Action",
+      "instrument": { "@id": "urn:aimd:instrument:proto-xrd-01" },
+      "object": { "@id": "igsn:XYZ12345" },
+      "prov:used": { "@id": "urn:aimd:method:xrd:powder:theta-2theta:v1" },
+      "parameter": [
+        {
+          "@type": "PropertyValue",
+          "name": "scan_range",
+          "value": "10 90",
+          "unitText": "deg 2theta"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "step",
+          "value": 0.02,
+          "unitText": "deg"
+        }
+      ]
+    }
   }
 }
