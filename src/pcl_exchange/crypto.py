@@ -96,11 +96,11 @@ class Verifier:
             else:
                 data = envelope_model
             
-            if 'authz' not in data or not data['authz'].get('jws'):
+            if not isinstance(data, dict) or 'authz' not in data or not isinstance(data.get('authz'), dict) or not data['authz'].get('jws'):
                 logger.warning("Verification failed: No signature found in the envelope.")
                 return False
                 
-            signature_str = str(data['authz']['jws']).strip()
+            signature_str = str(data.get('authz', {}).get('jws', '')).strip()
             
             # prepare the payload for verification
             expected_payload = canonicalize(data)
