@@ -19,6 +19,36 @@
     "capabilities",
     "authz"
   ],
+  "$defs": {
+    "nodeRef": {
+      "type": "object",
+      "required": ["@id"],
+      "properties": {
+        "@id": {
+          "anyOf": [
+            { "type": "string", "pattern": "^#.+$" },
+            { "type": "string", "format": "uri" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "partyIdentifierString": {
+      "type": "string",
+      "anyOf": [
+        { "pattern": "^https://ror\\.org/[0-9a-hjkmnp-z]{9}$" },
+        { "pattern": "^https://orcid\\.org/\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$" },
+        { "format": "uri" }
+      ]
+    },
+    "receiverIdentifierString": {
+      "type": "string",
+      "anyOf": [
+        { "pattern": "^https://ror\\.org/[0-9a-hjkmnp-z]{9}$" },
+        { "format": "uri" }
+      ]
+    }
+  },
   "properties": {
     "@id": {                 
       "type": "string",
@@ -40,19 +70,30 @@
     },
     "dateCreated": { "type": "string", "format": "date-time" },
     "sender": {
-      "type": "string",
       "anyOf": [
-        { "pattern": "^https://ror\\.org/[0-9a-hjkmnp-z]{9}$" },
-        { "pattern": "^https://orcid\\.org/\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$" },
-        { "format": "uri" }
+        { "$ref": "#/$defs/partyIdentifierString" },
+        {
+          "type": "object",
+          "required": ["@id"],
+          "properties": {
+            "@id": { "$ref": "#/$defs/partyIdentifierString" }
+          },
+          "additionalProperties": false
+        }
       ],
       "description": "ROR preferred for organizations, ORCID for people"
     },
     "receiver": {
-      "type": "string",
       "anyOf": [
-        { "pattern": "^https://ror\\.org/[0-9a-hjkmnp-z]{9}$" },
-        { "format": "uri" }
+        { "$ref": "#/$defs/receiverIdentifierString" },
+        {
+          "type": "object",
+          "required": ["@id"],
+          "properties": {
+            "@id": { "$ref": "#/$defs/receiverIdentifierString" }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "schema": {
@@ -157,10 +198,16 @@
           "required": ["type", "vpRef"],
           "properties": {
             "type": { "const": "VerifiablePresentationRef" },
-            "vpRef": { "type": "string", "format": "uri" }
+            "vpRef": {
+              "anyOf": [
+                { "type": "string", "pattern": "^#.+$" },
+                { "type": "string", "format": "uri" }
+              ]
+            }
           },
           "additionalProperties": false
-        }
+        },
+        { "$ref": "#/$defs/nodeRef" }
       ]
     },
     "respondTo": { "type": "string", "format": "uri" },

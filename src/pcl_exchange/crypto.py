@@ -1,29 +1,28 @@
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Dict, Any, Union
 from jwcrypto import jws, jwk
 from jwcrypto.common import json_encode
 
 logger = logging.getLogger(__name__)
 
+
 def canonicalize(data: Dict[str, Any]) -> bytes:
-    """
-    Prepares a dictionary for signing/hashing by ensuring a 
-    consistent string representation (JCS-like).
-    
-    1. Removes 'authz' field (since that holds the signature).
-    2. Sorts keys.
-    3. Removes whitespace (separators=(',', ':')).
-    """
+    """Prepares a dictionary for signing/hashing by ensuring a consistent string representation (JCS-like)."""
     
     clean_data = data.copy()
     
-    # remove 'authz' if present
     if 'authz' in clean_data:
         del clean_data['authz']
         
-    # JSON canonicalization
-    return json.dumps(clean_data, sort_keys=True, separators=(',', ':'),ensure_ascii=False).encode('utf-8')
+    return json.dumps(
+        clean_data, 
+        sort_keys=True, 
+        separators=(',', ':'),
+        ensure_ascii=False
+    ).encode('utf-8')
+
 
 class Signer:
     """
@@ -49,24 +48,19 @@ class Signer:
         Returns:
             str: The serialized JWS (Compact Serialization).
         """
-        # canonicalize the data
+
         payload_bytes = canonicalize(payload)
-        
-        # create JWS object
-        # uses EdDSA by default
         signer = jws.JWS(payload_bytes)
-        
-        # add signature
         signer.add_signature(
             self.key, 
             protected=json_encode({"alg": "EdDSA"})
         )
         
-        # serialize to compact form
         full_jws = signer.serialize(compact=True)
         header, payload, signature = full_jws.split('.')
         
         return f"{header}..{signature}"
+
 
 class Verifier:
     """
@@ -90,9 +84,8 @@ class Verifier:
         """
         signature_str = ''
         try:
-            # extract the JWS signature
             if hasattr(envelope_model, 'model_dump'):
-                data = envelope_model.model_dump(by_alias=True)
+                data = envelope_model.model_dump(by_alias=True, mode='json')
             else:
                 data = envelope_model
             
@@ -101,11 +94,9 @@ class Verifier:
                 return False
                 
             signature_str = str(data.get('authz', {}).get('jws', '')).strip()
-            
-            # prepare the payload for verification
+           
             expected_payload = canonicalize(data)
             
-            # verify the JWS
             verifier = jws.JWS()            
             verifier.deserialize(signature_str)
             verifier.verify(self.key, detached_payload=expected_payload)

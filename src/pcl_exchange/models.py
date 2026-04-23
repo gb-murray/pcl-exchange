@@ -4,12 +4,10 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, timezone
 import uuid
 
-# primitive patterns
 ROR_PATTERN = r"^https://ror\.org/[0-9a-hjkmnp-z]{9}$"
 ORCID_PATTERN = r"^https://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$"
 IGSN_PATTERN = r"^igsn:[A-Za-z0-9./:-]{5,}$"
 
-# content entity
 class PropertyValue(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     type: Literal["PropertyValue"] = Field("PropertyValue", alias="@type")
@@ -27,7 +25,6 @@ class PCLActionContent(BaseModel):
     used: Dict[str, str] = Field(..., alias="prov:used", description="Pointer to Method")
     parameters: List[PropertyValue] = Field(..., alias="parameter")
     
-    # helper to construct from strings
     @classmethod
     def create(cls, instrument_id: str, sample_id: str, method_id: str, params: dict):
         p_list = [
@@ -42,7 +39,6 @@ class PCLActionContent(BaseModel):
             parameter=p_list
         )
 
-# envelope entity
 class AuthZ(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     type: Literal["DetachedJWS"] = "DetachedJWS"
@@ -73,7 +69,6 @@ class PCLEnvelope(BaseModel):
     content_ref: Union[Dict[str, str], str] = Field(..., alias="contentRef")
     authz: Optional[AuthZ] = None
 
-# root RO-crate
 class ROCrateMetadata(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     id: str = Field("ro-crate-metadata.json", alias="@id")

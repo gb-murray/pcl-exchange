@@ -80,7 +80,6 @@ pcl:ParameterShape
 
 pcl:AcceptanceCriteriaShape
     a sh:NodeShape ;
-    sh:targetClass schema:CreativeWork ;
     sh:property [
         sh:path schema:text ;
         sh:minCount 1 ;
@@ -93,7 +92,6 @@ pcl:AcceptanceCriteriaShape
 
 pcl:MethodShape
     a sh:NodeShape ;
-    sh:targetClass schema:CreativeWork ;
     sh:property [
         sh:path schema:identifier ;
         sh:minCount 1 ;

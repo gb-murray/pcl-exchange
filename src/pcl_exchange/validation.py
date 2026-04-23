@@ -59,7 +59,7 @@ def validate_semantics(
         (True, None) if valid
         (False, error_message) if invalid
     """
-    # convert input data to RDFLib Graph
+
     if isinstance(data, Graph):
         data_graph = data
     else:
@@ -74,18 +74,16 @@ def validate_semantics(
         except Exception as e:
             return False, f"JSON-LD Parsing Error: {str(e)}"
 
-    # load SHACL shapes
     try:
         shape_text = get_schema_text(shape_filename)
     except FileNotFoundError as e:
         return False, str(e)
 
     shape_graph = Graph()
-    # assume ttl
+
     fmt = "json-ld" if shape_filename.endswith(".json") else "turtle"
     shape_graph.parse(data=shape_text, format=fmt)
 
-    # run validation
     is_valid, _, error_message = validate(
         data_graph,
         shacl_graph=shape_graph,

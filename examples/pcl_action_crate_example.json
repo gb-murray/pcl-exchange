@@ -5,7 +5,9 @@
       "prov": "http://www.w3.org/ns/prov#",
       "odrl": "http://www.w3.org/ns/odrl/2/",
       "qudt": "http://qudt.org/schema/qudt/",
-      "duo": "http://purl.obolibrary.org/obo/duo#"
+      "duo": "http://purl.obolibrary.org/obo/duo#",
+      "parameter": "http://schema.org/parameter",
+      "unitText": "http://schema.org/unitText"
     }
   ],
   "@graph": [
@@ -31,13 +33,13 @@
           "@id": "#content"
         }
       ],
-      "identifier": "urn:uuid:1c6b3e2f-..."
+      "identifier": "urn:uuid:1c6b3e2f-7b1a-4c2e-9f3a-1a2b3c4d5e6f"
     },
     {
       "@id": "#envelope",
       "@type": "PCLActionEnvelope",
       "profile": "https://w3id.org/pcl-profile/action/v1",
-      "identifier": "urn:uuid:1c6b3e2f-...",
+      "identifier": "urn:uuid:1c6b3e2f-7b1a-4c2e-9f3a-1a2b3c4d5e6f",
       "dateCreated": "2025-10-25T08:15:30Z",
       "sender": {
         "@id": "https://ror.org/03yrm5c26"
@@ -73,7 +75,7 @@
         "@id": "igsn:XYZ12345"
       },
       "prov:wasAttributedTo": {
-        "@id": "https://orcid.org/0000-0002-..."
+        "@id": "https://orcid.org/0000-0002-1825-0097"
       },
       "prov:used": {
         "@id": "#method"
