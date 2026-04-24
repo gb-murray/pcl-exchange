@@ -1,0 +1,151 @@
+{
+  "@context": [
+    "https://w3id.org/ro/crate/1.1/context",
+    {
+      "prov": "http://www.w3.org/ns/prov#",
+      "odrl": "http://www.w3.org/ns/odrl/2/",
+      "qudt": "http://qudt.org/schema/qudt/",
+      "duo": "http://purl.obolibrary.org/obo/duo#",
+      "parameter": "http://schema.org/parameter",
+      "unitText": "http://schema.org/unitText"
+    }
+  ],
+  "@graph": [
+    {
+      "@id": "ro-crate-metadata.json",
+      "@type": "CreativeWork",
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/crate/1.1"
+      },
+      "about": {
+        "@id": "./"
+      },
+      "encodingFormat": "application/json",
+      "contentUrl": {
+        "@id": "https://example.org/ro-crate-metadata.json"
+      }
+    },
+    {
+      "@id": "./",
+      "@type": "Dataset",
+      "name": "PCL Workflow Launch Crate",
+      "hasPart": [
+        {
+          "@id": "#envelope"
+        },
+        {
+          "@id": "#content"
+        },
+        {
+          "@id": "#wf-descriptor"
+        }
+      ],
+      "identifier": "urn:uuid:77dfadca-f5a0-40f9-a95d-59fbe12c3c73"
+    },
+    {
+      "@id": "#envelope",
+      "@type": "PCLActionEnvelope",
+      "profile": "https://w3id.org/pcl-profile/action/v1",
+      "identifier": "urn:uuid:77dfadca-f5a0-40f9-a95d-59fbe12c3c73",
+      "dateCreated": "2025-10-25T08:15:30Z",
+      "sender": {
+        "@id": "https://ror.org/03yrm5c26"
+      },
+      "receiver": {
+        "@id": "https://ror.org/01bj3aw27"
+      },
+      "schema": "https://w3id.org/pcl-schema/workflow-launch/v1.0",
+      "contentRef": {
+        "@id": "#content"
+      },
+      "action": "launch_workflow",
+      "capabilities": [
+        "workflow.cwl.launch"
+      ],
+      "project": "doi:10.1234/project.5678",
+      "sample": "igsn:XYZ12345",
+      "authz": {
+        "@id": "#vp"
+      },
+      "respondTo": "https://aimd-l.example.org/hooks/status",
+      "ttl": "PT10M",
+      "correlationId": "pcl-req-10001",
+      "idempotencyKey": "pcl-req-10001-v1"
+    },
+    {
+      "@id": "#content",
+      "@type": "SoftwareSourceCode",
+      "name": "Powder XRD Workflow",
+      "programmingLanguage": "CWL v1.2",
+      "hasPart": [
+        {
+          "@id": "#wf-descriptor"
+        }
+      ],
+      "parameter": [
+        {
+          "@type": "PropertyValue",
+          "name": "scan_range",
+          "value": "10 90",
+          "unitText": "deg 2theta"
+        }
+      ],
+      "object": {
+        "@id": "https://example.org/sample/XYZ12345"
+      },
+      "isPartOf": {
+        "@id": "https://doi.org/10.1234/project.5678"
+      },
+      "result": {
+        "@id": "#expected"
+      }
+    },
+    {
+      "@id": "#wf-descriptor",
+      "@type": "CreativeWork",
+      "name": "main.cwl",
+      "encodingFormat": "application/cwl",
+      "contentUrl": {
+        "@id": "https://example.org/workflows/main.cwl"
+      },
+      "sha256": "7f83b1657ff1fc53b92dc18148a1d65dfa13514a0a9e8f5f6c1f4a36f0f5f6a1",
+      "about": {
+        "@id": "#content"
+      }
+    },
+    {
+      "@id": "#expected",
+      "@type": "CreativeWork",
+      "about": {
+        "@id": "#content"
+      },
+      "distribution": [
+        {
+          "@id": "https://example.org/results/xrd-pattern.cif"
+        }
+      ],
+      "encodingFormat": "application/json",
+      "contentUrl": {
+        "@id": "https://example.org/results/schema.json"
+      }
+    },
+    {
+      "@id": "#vp",
+      "@type": "VerifiablePresentation",
+      "odrl:hasPolicy": [
+        {
+          "@id": "#policy"
+        }
+      ]
+    },
+    {
+      "@id": "#policy",
+      "@type": "odrl:Policy",
+      "odrl:permission": [
+        {
+          "odrl:action": "use"
+        }
+      ]
+    }
+  ]
+}
