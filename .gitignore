@@ -20,3 +20,8 @@ htmlcov/
 .vscode/
 .idea/
 examples/*test*.py
+
+# Copilot
+.github/copilot-instructions.md
+.github/prompts/*
+.github/agents/*

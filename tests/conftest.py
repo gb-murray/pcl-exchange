@@ -1,8 +1,12 @@
+import json
+from pathlib import Path
+from typing import Any, Dict
+
 import pytest
 from jwcrypto import jwk
 
 @pytest.fixture(scope="session")
-def key_pair():
+def key_pair() -> jwk.JWK:
     """
     Generates a temporary Ed25519 key pair for testing signatures.
     """
@@ -10,7 +14,7 @@ def key_pair():
     return key
 
 @pytest.fixture
-def valid_payload_data():
+def valid_payload_data() -> Dict[str, Any]:
     """
     Returns the dictionary of parameters needed to build a valid XRD request.
     """
@@ -25,8 +29,14 @@ def valid_payload_data():
     }
 
 @pytest.fixture
-def builder_defaults():
+def builder_defaults() -> Dict[str, str]:
     return {
         "sender_id": "https://ror.org/03yrm5c26",
         "receiver_id": "https://ror.org/01bj3aw27"
     }
+
+
+@pytest.fixture(scope="session")
+def example_action_crate() -> Dict[str, Any]:
+    path = Path("examples") / "pcl_action_crate_example.json"
+    return json.loads(path.read_text(encoding="utf-8"))
