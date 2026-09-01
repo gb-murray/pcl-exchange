@@ -9,6 +9,15 @@ ROR_PATTERN = r"^https://ror\.org/[0-9a-hjkmnp-z]{9}$"
 ORCID_PATTERN = r"^https://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$"
 IGSN_PATTERN = r"^igsn:[A-Za-z0-9./:-]{5,}$"
 PROTOCOL_VERSION_DEFAULT = "0.1.1"
+DEFAULT_SCHEMAS: Dict[str, str] = {
+    "register_data": "https://w3id.org/pcl-schema/register-data/v1.0",
+    "request_measurement": "https://w3id.org/pcl-schema/measure-request/v1.0",
+    "launch_workflow": "https://w3id.org/pcl-schema/launch-workflow/v1.0",
+    "update_metadata": "https://w3id.org/pcl-schema/update-metadata/v1.0",
+    "cancel_job": "https://w3id.org/pcl-schema/cancel-job/v1.0",
+    "ack": "https://w3id.org/pcl-schema/ack/v1.0",
+    "nack": "https://w3id.org/pcl-schema/nack/v1.0",
+}
 
 class PropertyValue(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -59,7 +68,7 @@ class PCLEnvelope(BaseModel):
     profile: str = "https://w3id.org/pcl-profile/action/v1"
 
     schema_: str = Field(
-        "https://w3id.org/pcl-schema/measure-request/v1.0", 
+        DEFAULT_SCHEMAS["request_measurement"],
         alias="schema"
     )
 

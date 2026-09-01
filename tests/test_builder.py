@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 import re
 from typing import Any, Dict
 
@@ -6,6 +7,8 @@ import pytest
 
 from pcl_exchange.builder import PCLMessageBuilder
 from pcl_exchange.crypto import Signer
+from pcl_exchange.models import DEFAULT_SCHEMAS
+from pcl_exchange.validation import validate_structure
 
 def test_builder_initialization(builder_defaults: Dict[str, str]) -> None:
     builder = PCLMessageBuilder(**builder_defaults)
@@ -33,6 +36,7 @@ def test_build_minimal_message(
     assert envelope["sender"] == builder_defaults['sender_id']
     assert "xrd.powder.theta-2theta" in envelope["capabilities"]
     assert envelope["action"] == "request_measurement"
+    assert envelope["schema"] == DEFAULT_SCHEMAS["request_measurement"]
 
 def test_missing_content_raises_error(builder_defaults: Dict[str, str]) -> None:
     """Trying to build without setting content should fail."""
@@ -58,7 +62,6 @@ def test_builder_sets_routing_fields(
     builder.set_deadline(deadline)
     builder.set_priority(5)
     builder.set_protocol_version("1.1")
-    builder.set_schema_hash("sha256", "a" * 64)
 
     message = builder.build()
     json_output = message.model_dump(by_alias=True, mode="json")
@@ -71,7 +74,111 @@ def test_builder_sets_routing_fields(
     assert envelope["deadline"] == deadline.isoformat().replace("+00:00", "Z")
     assert envelope["priority"] == 5
     assert envelope["protocolVersion"] == "1.1"
-    assert envelope["schemaHash"] == {"alg": "sha256", "value": "a" * 64}
+
+
+def test_set_action_type_updates_schema_default(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    builder = PCLMessageBuilder(**builder_defaults)
+    builder.set_content(**valid_payload_data)
+    builder.add_capability("xrd.powder.theta-2theta")
+    builder.set_action_type("launch_workflow")
+
+    envelope = next(
+        item
+        for item in builder.build().model_dump(by_alias=True, mode="json")["@graph"]
+        if item["@id"] == "#envelope"
+    )
+
+    assert envelope["action"] == "launch_workflow"
+    assert envelope["schema"] == DEFAULT_SCHEMAS["launch_workflow"]
+
+
+def test_set_action_type_invalid_raises_value_error(builder_defaults: Dict[str, str]) -> None:
+    builder = PCLMessageBuilder(**builder_defaults)
+
+    with pytest.raises(ValueError, match="Unsupported action type"):
+        builder.set_action_type("unsupported_action")
+
+
+def test_set_schema_after_set_action_type_overrides_default(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    custom_schema = "https://example.org/schemas/custom-workflow/v1"
+    builder = PCLMessageBuilder(**builder_defaults)
+    builder.set_content(**valid_payload_data)
+    builder.add_capability("xrd.powder.theta-2theta")
+    builder.set_action_type("launch_workflow")
+    builder.set_schema(custom_schema)
+
+    envelope = next(
+        item
+        for item in builder.build().model_dump(by_alias=True, mode="json")["@graph"]
+        if item["@id"] == "#envelope"
+    )
+
+    assert envelope["schema"] == custom_schema
+
+
+def test_set_action_type_after_set_schema_uses_action_default(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    builder = PCLMessageBuilder(**builder_defaults)
+    builder.set_content(**valid_payload_data)
+    builder.add_capability("xrd.powder.theta-2theta")
+    builder.set_schema("https://example.org/schemas/custom-measurement/v1")
+    builder.set_action_type("launch_workflow")
+
+    envelope = next(
+        item
+        for item in builder.build().model_dump(by_alias=True, mode="json")["@graph"]
+        if item["@id"] == "#envelope"
+    )
+
+    assert envelope["schema"] == DEFAULT_SCHEMAS["launch_workflow"]
+
+
+def test_set_schema_with_hash_sets_schema_and_schema_hash(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    schema_uri = "https://example.org/schemas/measurement/v2"
+    schema_hash = {"alg": "sha256", "value": "b" * 64}
+    builder = PCLMessageBuilder(**builder_defaults)
+    builder.set_content(**valid_payload_data)
+    builder.add_capability("xrd.powder.theta-2theta")
+    builder.set_schema(schema_uri, schema_hash=schema_hash)
+
+    envelope = next(
+        item
+        for item in builder.build().model_dump(by_alias=True, mode="json")["@graph"]
+        if item["@id"] == "#envelope"
+    )
+
+    assert envelope["schema"] == schema_uri
+    assert envelope["schemaHash"] == schema_hash
+
+
+def test_set_action_type_and_schema_validate_structure(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+    key_pair: Any,
+) -> None:
+    builder = PCLMessageBuilder(**builder_defaults)
+    builder.set_content(**valid_payload_data)
+    builder.add_capability("xrd.powder.theta-2theta")
+    builder.set_action_type("launch_workflow")
+    builder.set_schema("https://example.org/schemas/workflow/v2")
+    builder.sign(Signer(private_key=key_pair))
+
+    data_dict = json.loads(builder.build().to_json())
+    envelope = next(item for item in data_dict["@graph"] if item["@id"] == "#envelope")
+    valid, error = validate_structure(envelope)
+
+    assert valid, error
 
 
 def test_build_populates_content_digest(
@@ -149,7 +256,11 @@ def test_sign_cannot_be_called_twice(
         lambda b, _: b.set_deadline(datetime(2030, 1, 1, tzinfo=timezone.utc)),
         lambda b, _: b.set_priority(5),
         lambda b, _: b.set_protocol_version("1.1"),
-        lambda b, _: b.set_schema_hash("sha256", "a" * 64),
+        lambda b, _: b.set_action_type("launch_workflow"),
+        lambda b, _: b.set_schema(
+            "https://w3id.org/pcl-schema/measure-request/v1.0",
+            schema_hash={"alg": "sha256", "value": "a" * 64},
+        ),
     ],
 )
 def test_mutations_after_sign_are_rejected(

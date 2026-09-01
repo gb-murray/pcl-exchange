@@ -5,7 +5,17 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .crypto import compute_content_digest
-from .models import PCLMessage, PCLEnvelope, PCLActionContent, ROCrateMetadata, ROCrateRoot
+from .models import (
+    DEFAULT_SCHEMAS,
+    PCLMessage,
+    PCLEnvelope,
+    PCLActionContent,
+    ROCrateMetadata,
+    ROCrateRoot,
+)
+
+
+ALLOWED_ACTION_TYPES = tuple(DEFAULT_SCHEMAS.keys())
 
 
 class PCLMessageBuilder:
@@ -16,6 +26,7 @@ class PCLMessageBuilder:
         self.creation_timestamp: datetime = datetime.now(timezone.utc)
         self.payload: Optional[PCLActionContent] = None
         self.action_type: str = "request_measurement"
+        self.schema_uri: str = DEFAULT_SCHEMAS[self.action_type]
         self.capabilities: List[str] = []
         self.project_id: str = "doi:10.1234/placeholder"
         self.sample_id: str = ""
@@ -91,9 +102,23 @@ class PCLMessageBuilder:
         self.protocol_version = protocol_version
         return self
 
-    def set_schema_hash(self, alg: str, value: str) -> PCLMessageBuilder:
+    def set_action_type(self, action_type: str) -> PCLMessageBuilder:
         self._check_not_sealed()
-        self.schema_hash = {"alg": alg, "value": value}
+        if action_type not in ALLOWED_ACTION_TYPES:
+            allowed_values = ", ".join(ALLOWED_ACTION_TYPES)
+            raise ValueError(
+                f"Unsupported action type '{action_type}'. Allowed values: {allowed_values}."
+            )
+        self.action_type = action_type
+        self.schema_uri = DEFAULT_SCHEMAS[action_type]
+        return self
+
+    def set_schema(
+        self, uri: str, schema_hash: Optional[Dict[str, str]] = None
+    ) -> PCLMessageBuilder:
+        self._check_not_sealed()
+        self.schema_uri = uri
+        self.schema_hash = schema_hash
         return self
 
     def _create_envelope_model(self, authz_data: Optional[Dict[str, str]] = None) -> PCLEnvelope:
@@ -109,6 +134,7 @@ class PCLMessageBuilder:
             "id": "#envelope",
             "sender": self.sender,
             "receiver": self.receiver,
+            "schema": self.schema_uri,
             "action": self.action_type,
             "capabilities": self.capabilities,
             "project": self.project_id,
