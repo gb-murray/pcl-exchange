@@ -83,6 +83,7 @@ class PCLEnvelope(BaseModel):
     sample: str
     
     content_ref: Union[Dict[str, str], str] = Field(..., alias="contentRef")
+    content_digest: Optional[Dict[str, Any]] = Field(None, alias="contentDigest")
     authz: AuthZ = None
 
     respond_to: Optional[str] = Field(None, alias="respondTo")

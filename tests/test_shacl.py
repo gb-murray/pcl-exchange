@@ -40,7 +40,7 @@ def test_invalid_structure_fails_shacl(builder_defaults, valid_payload_data):
     # break the structure by removing a required field
     for item in message.graph:
         if item.id == "#content":
-            item.instrument = None 
+            item.object = None 
             
     # break the JSON for SHACL
     json_str = message.to_json()
@@ -48,10 +48,11 @@ def test_invalid_structure_fails_shacl(builder_defaults, valid_payload_data):
     
     for item in json_dict["@graph"]:
         if item["@id"] == "#content":
-            del item["instrument"] 
+            if "object" in item:
+                del item["object"] 
             
     broken_json = json.dumps(json_dict)
 
     conforms, report = validate_semantics(broken_json, "shapes/measurement_request.ttl")
     assert not conforms
-    assert "instrument" in report # the report should have missing field
+    assert "object" in report # the report should have missing field

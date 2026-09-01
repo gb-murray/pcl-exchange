@@ -1,4 +1,5 @@
 import json
+import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Union
@@ -23,6 +24,17 @@ def canonicalize(data: Dict[str, Any]) -> bytes:
         separators=(',', ':'),
         ensure_ascii=False
     ).encode('utf-8')
+
+
+def compute_content_digest(data: Dict[str, Any], alg: str = "sha256") -> Dict[str, Union[str, int]]:
+    canonical_bytes = canonicalize(data)
+    digest = hashlib.new(alg)
+    digest.update(canonical_bytes)
+    return {
+        "alg": alg,
+        "value": digest.hexdigest(),
+        "size": len(canonical_bytes)
+    }
 
 
 class Signer:
