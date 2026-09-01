@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pcl-exchange"
-version = "0.1.0"
+version = "2026.5.0"
 description = "PCL Exchange Protocol: A Python library for creating and validating PCL Action Envelopes."
 readme = "README.md"
 authors = [
-  { name = "HTMDEC", email = "info@htmdec.org" },
+  { name = "Gannon Murray", email = "gmurra12@jh.edu" },
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"

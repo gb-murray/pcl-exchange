@@ -1,4 +1,5 @@
 import json
+import hashlib
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Union
@@ -8,20 +9,32 @@ from jwcrypto.common import json_encode
 logger = logging.getLogger(__name__)
 
 
+def _drop_none(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {key: value for key, value in data.items() if value is not None}
+
 def canonicalize(data: Dict[str, Any]) -> bytes:
     """Prepares a dictionary for signing/hashing by ensuring a consistent string representation (JCS-like)."""
-    
-    clean_data = data.copy()
-    
-    if 'authz' in clean_data:
-        del clean_data['authz']
-        
+
+    clean_data = _drop_none(data.copy())
+    clean_data.pop("authz", None)
+
     return json.dumps(
-        clean_data, 
-        sort_keys=True, 
+        clean_data,
+        sort_keys=True,
         separators=(',', ':'),
         ensure_ascii=False
     ).encode('utf-8')
+
+
+def compute_content_digest(data: Dict[str, Any], alg: str = "sha256") -> Dict[str, Union[str, int]]:
+    canonical_bytes = canonicalize(data)
+    digest = hashlib.new(alg)
+    digest.update(canonical_bytes)
+    return {
+        "alg": alg,
+        "value": digest.hexdigest(),
+        "size": len(canonical_bytes)
+    }
 
 
 class Signer:
