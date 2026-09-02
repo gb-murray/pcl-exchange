@@ -57,13 +57,14 @@
       ],
       "project": "doi:10.1234/project.5678",
       "sample": "igsn:XYZ12345",
-      "authz": {
-        "@id": "#vp"
-      },
       "respondTo": "https://aimd-l.example.org/hooks/status",
       "ttl": "PT10M",
       "correlationId": "pcl-req-00042",
-      "idempotencyKey": "pcl-req-00042-v1"
+      "idempotencyKey": "pcl-req-00042-v1",
+      "authz": {
+        "type": "DetachedJWS",
+        "jws": "eyJhbGciOiJFZERTQSJ9..6KBygFfzxegMmK3slZSrB1W90oy-oV6lwxtD4V4Rwo5nU2mwPQdvBud0mPlNAozEibweOgHdqEIu9Pdx1ciAAw"
+      }
     },
     {
       "@id": "#content",
@@ -88,7 +89,7 @@
           "@type": "PropertyValue",
           "name": "scan_range",
           "value": "10 90",
-          "unitText": "deg 2\u03b8"
+          "unitText": "deg 2θ"
         },
         {
           "@type": "PropertyValue",
@@ -101,13 +102,13 @@
     {
       "@id": "#method",
       "@type": "CreativeWork",
-      "name": "Powder XRD theta\u20132theta",
+      "name": "Powder XRD theta–2theta",
       "identifier": "urn:aimd:method:xrd:powder:theta-2theta:v1"
     },
     {
       "@id": "#criteria",
       "@type": "CreativeWork",
-      "text": "SNR \u2265 20 at peak near 2\u03b8=28 deg; max dose 1 mC."
+      "text": "SNR ≥ 20 at peak near 2θ=28 deg; max dose 1 mC."
     },
     {
       "@id": "#vp",

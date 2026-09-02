@@ -40,3 +40,9 @@ def builder_defaults() -> Dict[str, str]:
 def example_action_crate() -> Dict[str, Any]:
     path = Path("examples") / "pcl_action_crate_example.json"
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="session")
+def example_sender_public_key() -> jwk.JWK:
+    """Public key matching the DetachedJWS signature committed in pcl_action_crate_example.json."""
+    return jwk.JWK(**{"crv": "Ed25519", "kty": "OKP", "x": "71FUvybwttZv-9IFCeyqnXaJd-Fhj7n8nal3-MB9Mnk"})
