@@ -6,6 +6,10 @@
   "required": ["type", "timestamp", "code", "reason"],
   "additionalProperties": false,
   "properties": {
+    "@id": {
+      "type": "string",
+      "description": "Optional JSON-LD node identifier, for linking from an envelope's contentRef"
+    },
     "type": {
       "type": "string",
       "const": "https://w3id.org/pcl-profile/action/v1#Error"
