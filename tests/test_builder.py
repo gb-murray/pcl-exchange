@@ -1,13 +1,13 @@
 from datetime import datetime, timezone
 import json
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pytest
 
-from pcl_exchange.builder import PCLMessageBuilder
+from pcl_exchange.builder import PCLMessageBuilder, build_ack, build_nack
 from pcl_exchange.crypto import Signer
-from pcl_exchange.models import DEFAULT_SCHEMAS
+from pcl_exchange.models import DEFAULT_SCHEMAS, PCLEnvelope, PCLError, PCLErrorCode, PCLErrorFault
 from pcl_exchange.validation import validate_structure
 
 def test_builder_initialization(builder_defaults: Dict[str, str]) -> None:
@@ -198,6 +198,145 @@ def test_build_populates_content_digest(
     assert re.fullmatch(r"[A-Fa-f0-9]{64}", content_digest["value"]) is not None
     assert isinstance(content_digest["size"], int)
     assert content_digest["size"] > 0
+
+
+def _build_original_envelope(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+    correlation_id: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
+) -> PCLEnvelope:
+    """Builds a signed-shape request envelope to use as the `envelope` argument for build_ack/build_nack."""
+    builder = PCLMessageBuilder(**builder_defaults)
+    builder.set_content(**valid_payload_data)
+    builder.add_capability("xrd.powder.theta-2theta")
+    if correlation_id is not None:
+        builder.set_correlation_id(correlation_id)
+    if idempotency_key is not None:
+        builder.set_idempotency_key(idempotency_key)
+    message = builder.build()
+    return next(item for item in message.graph if isinstance(item, PCLEnvelope))
+
+
+def test_build_ack_swaps_sender_receiver_and_echoes_fields(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    original = _build_original_envelope(builder_defaults, valid_payload_data, correlation_id="pcl-req-00042")
+
+    ack = build_ack(original)
+
+    assert ack.sender == original.receiver
+    assert ack.receiver == original.sender
+    assert ack.action == "ack"
+    assert ack.schema_ == DEFAULT_SCHEMAS["ack"]
+    assert ack.capabilities == original.capabilities
+    assert ack.project == original.project
+    assert ack.sample == original.sample
+    assert ack.correlation_id == "pcl-req-00042"
+    assert ack.content_ref == "#none"
+    assert ack.authz is None
+
+
+def test_build_ack_correlation_id_falls_back_to_original_identifier(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    original = _build_original_envelope(builder_defaults, valid_payload_data)
+
+    ack = build_ack(original)
+
+    assert ack.correlation_id == original.identifier
+
+
+def test_build_ack_job_id_sets_identifier(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    original = _build_original_envelope(builder_defaults, valid_payload_data)
+
+    ack_with_job_id = build_ack(original, job_id="job-12345678")
+    ack_without_job_id = build_ack(original)
+
+    assert ack_with_job_id.identifier == "job-12345678"
+    assert ack_without_job_id.identifier.startswith("urn:uuid:")
+
+
+def test_build_ack_validates_against_envelope_schema(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+    key_pair: Any,
+) -> None:
+    original = _build_original_envelope(builder_defaults, valid_payload_data)
+
+    ack = build_ack(original, job_id="job-12345678")
+    ack_data = ack.model_dump(mode="json", by_alias=True, exclude_none=True)
+    ack_data["authz"] = {"type": "DetachedJWS", "jws": Signer(private_key=key_pair).sign(ack_data)}
+
+    valid, error = validate_structure(ack_data)
+
+    assert valid, error
+
+
+def test_build_nack_returns_envelope_and_error_linked_by_content_ref(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    original = _build_original_envelope(builder_defaults, valid_payload_data, correlation_id="pcl-req-00042")
+
+    nack_envelope, error = build_nack(
+        original, code=PCLErrorCode.SCHEMA_MISMATCH, reason="Envelope failed schema validation"
+    )
+
+    assert nack_envelope.action == "nack"
+    assert nack_envelope.schema_ == DEFAULT_SCHEMAS["nack"]
+    assert nack_envelope.content_ref == {"@id": "#error"}
+    assert error.id == "#error"
+    assert error.code == PCLErrorCode.SCHEMA_MISMATCH
+    assert error.reason == "Envelope failed schema validation"
+    assert error.correlation_id == nack_envelope.correlation_id == "pcl-req-00042"
+
+
+def test_build_nack_carries_faults(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+) -> None:
+    original = _build_original_envelope(builder_defaults, valid_payload_data)
+    faults = [PCLErrorFault(message="Value must match pattern", path="/capabilities/0")]
+
+    _, error = build_nack(original, code=PCLErrorCode.SCHEMA_MISMATCH, reason="bad", faults=faults)
+
+    assert error.faults == faults
+
+
+def test_build_nack_validates_against_envelope_and_error_schemas(
+    builder_defaults: Dict[str, str],
+    valid_payload_data: Dict[str, Any],
+    key_pair: Any,
+) -> None:
+    original = _build_original_envelope(builder_defaults, valid_payload_data)
+
+    nack_envelope, error = build_nack(original, code=PCLErrorCode.INTERNAL_ERROR, reason="Unexpected failure")
+
+    envelope_data = nack_envelope.model_dump(mode="json", by_alias=True, exclude_none=True)
+    envelope_data["authz"] = {"type": "DetachedJWS", "jws": Signer(private_key=key_pair).sign(envelope_data)}
+    envelope_valid, envelope_error = validate_structure(envelope_data)
+    assert envelope_valid, envelope_error
+
+    error_data = error.model_dump(mode="json", by_alias=True, exclude_none=True)
+    error_valid, error_error = validate_structure(error_data, schema_filename="error.json")
+    assert error_valid, error_error
+
+
+def test_pclerror_to_json_round_trip() -> None:
+    error = PCLError(id="#error", code=PCLErrorCode.NOT_FOUND, reason="Sample not found")
+
+    parsed = json.loads(error.to_json())
+
+    assert parsed["@id"] == "#error"
+    assert parsed["code"] == "NOT_FOUND"
+    assert parsed["reason"] == "Sample not found"
+    assert "correlationId" not in parsed
 
 
 def test_content_digest_is_deterministic_for_fixed_content(

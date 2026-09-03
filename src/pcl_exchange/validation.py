@@ -8,17 +8,26 @@ import jsonschema
 
 from . import schemas
 
+
+def _get_schema_resource(filename: str):
+    resource = importlib.resources.files(schemas)
+    for part in filename.split("/"):
+        resource = resource / part
+    return resource
+
+
+def get_shape_for_action(action: str) -> Optional[str]:
+    """Return 'shapes/{action}.ttl' if that shape file exists in the package, else None."""
+    candidate = f"shapes/{action}.ttl"
+    return candidate if _get_schema_resource(candidate).is_file() else None
+
 def get_schema_text(filename: str) -> str:
     """
     Helper to read a schema file from inside the package.
     Example: get_schema_text('envelope.json')
     """
     try:
-        parts = filename.split('/')
-        resource = importlib.resources.files(schemas)
-        for part in parts:
-            resource = resource / part
-        return resource.read_text(encoding='utf-8')
+        return _get_schema_resource(filename).read_text(encoding='utf-8')
     except FileNotFoundError:
         raise FileNotFoundError(f"Schema file '{filename}' not found in package resources.")
 
@@ -46,7 +55,7 @@ def validate_structure(data: Dict, schema_filename: str = "envelope.json") -> Tu
 
 def validate_semantics(
     data: Union[str, Dict, Graph], 
-    shape_filename: str = "shapes/measurement_request.ttl"
+    shape_filename: str = "shapes/request_measurement.ttl"
 ) -> Tuple[bool, str]:
     """
     Validates the RDF semantics using SHACL.

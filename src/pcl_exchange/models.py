@@ -127,6 +127,7 @@ class PCLErrorFault(BaseModel):
 class PCLError(BaseModel):
     """Structured error response for PCL action processing."""
     model_config = ConfigDict(populate_by_name=True)
+    id: Optional[str] = Field(None, alias="@id")
     type: Literal["https://w3id.org/pcl-profile/action/v1#Error"] = (
         "https://w3id.org/pcl-profile/action/v1#Error"
     )
@@ -140,6 +141,9 @@ class PCLError(BaseModel):
     retry_after: Optional[Union[int, datetime]] = Field(None, alias="retryAfter")
     faults: Optional[List[PCLErrorFault]] = None
     details: Optional[Dict[str, Any]] = None
+
+    def to_json(self) -> str:
+        return self.model_dump_json(by_alias=True, indent=2, exclude_none=True)
 
 class ROCrateMetadata(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

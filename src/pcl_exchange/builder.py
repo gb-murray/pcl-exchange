@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .crypto import compute_content_digest
 from .models import (
@@ -10,12 +10,25 @@ from .models import (
     PCLMessage,
     PCLEnvelope,
     PCLActionContent,
+    PCLError,
+    PCLErrorCode,
+    PCLErrorFault,
     ROCrateMetadata,
     ROCrateRoot,
 )
 
 
 ALLOWED_ACTION_TYPES = tuple(DEFAULT_SCHEMAS.keys())
+
+_RO_CRATE_CONTEXT: List[Any] = [
+    "https://w3id.org/ro/crate/1.1/context",
+    {
+        "prov": "http://www.w3.org/ns/prov#",
+        "qudt": "http://qudt.org/schema/qudt/",
+        "parameter": "http://schema.org/parameter",
+        "unitText": "http://schema.org/unitText"
+    }
+]
 
 
 class PCLMessageBuilder:
@@ -192,14 +205,68 @@ class PCLMessageBuilder:
             self.payload
         ]
         
-        context = [
-            "https://w3id.org/ro/crate/1.1/context",
-            {
-                "prov": "http://www.w3.org/ns/prov#", 
-                "qudt": "http://qudt.org/schema/qudt/",
-                "parameter": "http://schema.org/parameter",
-                "unitText": "http://schema.org/unitText"
-            }
-        ]
-        
-        return PCLMessage(context=context, graph=graph_items)
+        return PCLMessage(context=_RO_CRATE_CONTEXT, graph=graph_items)
+
+
+def _build_response_envelope(
+    original: PCLEnvelope,
+    action: str,
+    content_ref: Union[Dict[str, str], str],
+    identifier: Optional[str] = None,
+) -> PCLEnvelope:
+    """Builds an unsigned response envelope that swaps sender/receiver and echoes routing fields from `original`."""
+    envelope_data: Dict[str, Any] = {
+        "id": "#envelope",
+        "sender": original.receiver,
+        "receiver": original.sender,
+        "schema_": DEFAULT_SCHEMAS[action],
+        "action": action,
+        "capabilities": original.capabilities,
+        "project": original.project,
+        "sample": original.sample,
+        "identifier": identifier,
+        "content_ref": content_ref,
+        "authz": None,
+        "correlation_id": original.correlation_id or original.identifier,
+        "idempotency_key": original.idempotency_key,
+    }
+    filtered_data = {key: value for key, value in envelope_data.items() if value is not None}
+    return PCLEnvelope(**filtered_data)
+
+
+def build_ack(envelope: PCLEnvelope, job_id: Optional[str] = None) -> PCLEnvelope:
+    """Builds a minimal, unsigned ack PCLEnvelope in response to `envelope`."""
+    return _build_response_envelope(envelope, action="ack", content_ref="#none", identifier=job_id)
+
+
+def build_nack(
+    envelope: PCLEnvelope,
+    code: PCLErrorCode,
+    reason: str,
+    faults: Optional[List[PCLErrorFault]] = None,
+) -> Tuple[PCLEnvelope, PCLError]:
+    """Builds an unsigned nack PCLEnvelope plus its PCLError content, in response to `envelope`."""
+    nack_envelope = _build_response_envelope(envelope, action="nack", content_ref={"@id": "#error"})
+    error = PCLError(
+        id="#error",
+        code=code,
+        reason=reason,
+        correlation_id=nack_envelope.correlation_id,
+        idempotency_key=nack_envelope.idempotency_key,
+        faults=faults,
+    )
+    return nack_envelope, error
+
+
+def build_response_message(envelope: PCLEnvelope, content: Optional[PCLError] = None) -> PCLMessage:
+    """Wraps a response envelope (+ optional PCLError content) into an RO-Crate PCLMessage for transport."""
+    has_part: List[Dict[str, str]] = [{"@id": envelope.id}]
+    graph_items: List[Any] = [ROCrateMetadata(), ROCrateRoot(hasPart=has_part), envelope]
+
+    if content is not None:
+        if content.id is None:
+            raise ValueError("content must have an '@id' to be referenced from the RO-Crate root's hasPart list.")
+        has_part.append({"@id": content.id})
+        graph_items.append(content.model_dump(mode="json", by_alias=True, exclude_none=True))
+
+    return PCLMessage(context=_RO_CRATE_CONTEXT, graph=graph_items)

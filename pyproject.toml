@@ -25,7 +25,8 @@ dependencies = [
     "rdflib>=6.0",         
     "pyshacl>=0.20",       
     "requests>=2.31",       
-    "jsonschema>=4.0"
+    "jsonschema>=4.0",
+    "tenacity>=8.0"
 ]
 
 [project.urls]
@@ -35,6 +36,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "pytest-httpserver>=1.0",
     "black",
     "isort",
     "build",
