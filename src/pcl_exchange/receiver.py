@@ -8,7 +8,7 @@ from jwcrypto import jwk
 from pydantic import BaseModel, Field
 
 from .crypto import Verifier
-from .validation import validate_structure
+from .validation import get_shape_for_action, validate_semantics, validate_structure
 
 CrateInput = Union[Dict[str, Any], str, Path]
 PublicKeyResolver = Callable[[str], Union[jwk.JWK, Dict[str, Any]]]
@@ -24,6 +24,7 @@ class CrateParseResult(BaseModel):
     envelope: Optional[Dict[str, Any]] = None
     content: Optional[Dict[str, Any]] = None
     errors: List[CrateError] = Field(default_factory=list)
+    shacl_report: Optional[str] = None
 
 
 def _load_crate(crate_json_or_path: CrateInput) -> Union[Dict[str, Any], CrateError]:
@@ -100,6 +101,24 @@ def verify_envelope_signature(
     return True, None
 
 
+def _validate_semantic_shape(
+    envelope: Dict[str, Any], content: Dict[str, Any], context: Any
+) -> Tuple[Optional[str], Optional[CrateError]]:
+    """Run SHACL validation for the envelope's action; skipped actions yield NO_SHAPE_FOR_ACTION."""
+    action = envelope.get("action")
+    shape_filename = get_shape_for_action(action) if isinstance(action, str) else None
+    if shape_filename is None:
+        return None, CrateError(
+            code="NO_SHAPE_FOR_ACTION", message=f"No SHACL shape registered for action '{action}'"
+        )
+
+    sub_graph = {"@context": context, "@graph": [envelope, content]}
+    conforms, report = validate_semantics(sub_graph, shape_filename)
+    if not conforms:
+        return report, CrateError(code="SHACL_VALIDATION_ERROR", message=report)
+    return report, None
+
+
 def parse_and_validate_crate(
     crate_json_or_path: CrateInput, public_key_resolver: PublicKeyResolver
 ) -> CrateParseResult:
@@ -149,4 +168,12 @@ def parse_and_validate_crate(
     if not signature_valid and signature_error is not None:
         errors.append(signature_error)
 
-    return CrateParseResult(valid=not errors, envelope=envelope, content=content, errors=errors)
+    shacl_report: Optional[str] = None
+    if schema_valid and signature_valid and content is not None:
+        shacl_report, shacl_error = _validate_semantic_shape(envelope, content, loaded.get("@context"))
+        if shacl_error is not None:
+            errors.append(shacl_error)
+
+    return CrateParseResult(
+        valid=not errors, envelope=envelope, content=content, errors=errors, shacl_report=shacl_report
+    )

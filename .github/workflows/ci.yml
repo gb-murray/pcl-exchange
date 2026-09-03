@@ -61,7 +61,7 @@ jobs:
           data_graph = Graph()
           data_graph.parse("examples/pcl_action_crate_example.json", format="json-ld")
 
-          shape = "schemas/shapes/measurement_request.ttl"
+          shape = "schemas/shapes/request_measurement.ttl"
           shape_graph = Graph()
           shape_graph.parse(shape, format="turtle")
           conforms, _, report = validate(
@@ -91,7 +91,7 @@ jobs:
           data_graph = Graph()
           data_graph.parse("examples/pcl_workflow_crate_example.json", format="json-ld")
 
-          shape = "schemas/shapes/workflow_launch.ttl"
+          shape = "schemas/shapes/launch_workflow.ttl"
           shape_graph = Graph()
           shape_graph.parse(shape, format="turtle")
           conforms, _, report = validate(

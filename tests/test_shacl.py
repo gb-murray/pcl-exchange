@@ -26,7 +26,7 @@ def test_generated_json_passes_shacl(builder_defaults, valid_payload_data, key_p
     is_valid_structure, err = validate_structure(envelope_dict)
     assert is_valid_structure, f"JSON Schema Validation Failed: {err}"
 
-    conforms, report = validate_semantics(json_data, "shapes/measurement_request.ttl")
+    conforms, report = validate_semantics(json_data, "shapes/request_measurement.ttl")
     assert conforms, f"SHACL Validation Failed:\n{report}"
 
 def test_invalid_structure_fails_shacl(builder_defaults, valid_payload_data):
@@ -53,6 +53,6 @@ def test_invalid_structure_fails_shacl(builder_defaults, valid_payload_data):
             
     broken_json = json.dumps(json_dict)
 
-    conforms, report = validate_semantics(broken_json, "shapes/measurement_request.ttl")
+    conforms, report = validate_semantics(broken_json, "shapes/request_measurement.ttl")
     assert not conforms
     assert "object" in report # the report should have missing field

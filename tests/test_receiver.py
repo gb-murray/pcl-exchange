@@ -1,5 +1,6 @@
 import copy
 import json
+import uuid
 from pathlib import Path
 from typing import Any, Callable, Dict
 
@@ -202,3 +203,128 @@ def test_unsupported_authz_type(
 
     assert result.valid is False
     assert [e.code for e in result.errors] == ["UNSUPPORTED_AUTHZ_TYPE"]
+
+
+def test_signed_crate_passes_shacl(
+    key_pair: jwk.JWK, builder_defaults: Dict[str, str], valid_payload_data: Dict[str, Any]
+) -> None:
+    data = _build_signed_crate(key_pair, builder_defaults, valid_payload_data)
+
+    result = parse_and_validate_crate(data, lambda sender_id: key_pair)
+
+    assert result.valid is True
+    assert result.errors == []
+    assert result.shacl_report is not None
+
+
+def test_shacl_violation_reported(
+    key_pair: jwk.JWK, builder_defaults: Dict[str, str], valid_payload_data: Dict[str, Any]
+) -> None:
+    data = _build_signed_crate(key_pair, builder_defaults, valid_payload_data)
+    for node in data["@graph"]:
+        if node.get("@id") == "#content":
+            del node["object"]
+
+    result = parse_and_validate_crate(data, lambda sender_id: key_pair)
+
+    assert result.valid is False
+    assert [e.code for e in result.errors] == ["SHACL_VALIDATION_ERROR"]
+    assert result.shacl_report is not None and "object" in result.shacl_report
+
+
+def test_shacl_skipped_when_schema_invalid(
+    key_pair: jwk.JWK, builder_defaults: Dict[str, str], valid_payload_data: Dict[str, Any]
+) -> None:
+    data = _build_signed_crate(key_pair, builder_defaults, valid_payload_data)
+    for node in data["@graph"]:
+        if node.get("@id") == "#envelope":
+            del node["sender"]
+
+    result = parse_and_validate_crate(data, lambda sender_id: key_pair)
+
+    assert result.valid is False
+    assert result.shacl_report is None
+    assert not any(e.code == "SHACL_VALIDATION_ERROR" for e in result.errors)
+
+
+def test_shacl_skipped_when_signature_invalid(
+    key_pair: jwk.JWK, builder_defaults: Dict[str, str], valid_payload_data: Dict[str, Any]
+) -> None:
+    data = _build_signed_crate(key_pair, builder_defaults, valid_payload_data)
+    for node in data["@graph"]:
+        if node.get("@id") == "#envelope":
+            node["capabilities"] = ["tampered.capability"]
+
+    result = parse_and_validate_crate(data, lambda sender_id: key_pair)
+
+    assert result.valid is False
+    assert result.shacl_report is None
+    assert not any(e.code == "SHACL_VALIDATION_ERROR" for e in result.errors)
+
+
+def test_no_shape_for_unmapped_action(
+    key_pair: jwk.JWK, builder_defaults: Dict[str, str], valid_payload_data: Dict[str, Any]
+) -> None:
+    builder = PCLMessageBuilder(**builder_defaults)
+    builder.set_content(**valid_payload_data)
+    builder.add_capability("xrd.powder.theta-2theta")
+    builder.set_action_type("cancel_job")
+    builder.sign(Signer(private_key=key_pair))
+    data = json.loads(builder.build().to_json())
+
+    result = parse_and_validate_crate(data, lambda sender_id: key_pair)
+
+    assert result.valid is False
+    assert [e.code for e in result.errors] == ["NO_SHAPE_FOR_ACTION"]
+    assert result.shacl_report is None
+
+
+def _build_signed_workflow_crate(key_pair: jwk.JWK) -> Dict[str, Any]:
+    """Hand-builds a launch_workflow envelope + SoftwareSourceCode content; PCLMessageBuilder only supports Action content."""
+    content: Dict[str, Any] = {
+        "@id": "#content",
+        "@type": "SoftwareSourceCode",
+        "name": "Test Workflow",
+        "programmingLanguage": "CWL v1.2",
+        "codeRepository": {"@id": "https://example.org/workflows/main"},
+        "parameter": [{"@type": "PropertyValue", "name": "scan_range", "value": "10 90"}],
+    }
+    envelope: Dict[str, Any] = {
+        "@id": "#envelope",
+        "@type": "PCLActionEnvelope",
+        "profile": "https://w3id.org/pcl-profile/action/v1",
+        "identifier": f"urn:uuid:{uuid.uuid4()}",
+        "dateCreated": "2026-01-01T00:00:00Z",
+        "sender": {"@id": "https://ror.org/03yrm5c26"},
+        "receiver": {"@id": "https://ror.org/01bj3aw27"},
+        "schema": "https://w3id.org/pcl-schema/launch-workflow/v1.0",
+        "action": "launch_workflow",
+        "contentRef": {"@id": "#content"},
+        "project": "doi:10.1234/project.5678",
+        "sample": "igsn:XYZ12345",
+        "capabilities": ["workflow.cwl.launch"],
+    }
+
+    jws_string = Signer(key_pair).sign(envelope)
+    envelope["authz"] = {"type": "DetachedJWS", "jws": jws_string}
+
+    context = [
+        "https://w3id.org/ro/crate/1.1/context",
+        {
+            "prov": "http://www.w3.org/ns/prov#",
+            "qudt": "http://qudt.org/schema/qudt/",
+            "parameter": "http://schema.org/parameter",
+            "unitText": "http://schema.org/unitText",
+        },
+    ]
+    return {"@context": context, "@graph": [envelope, content]}
+
+
+def test_workflow_launch_action_dispatches_workflow_shape(key_pair: jwk.JWK) -> None:
+    data = _build_signed_workflow_crate(key_pair)
+
+    result = parse_and_validate_crate(data, lambda sender_id: key_pair)
+
+    assert result.valid is True
+    assert result.errors == []
+    assert result.shacl_report is not None

@@ -40,11 +40,11 @@ validate-shacl:
 
 validate-shacl-measurement:
 	@echo "--> Validating SHACL..."
-	$(PYTHON) -c "exec(\"import sys\\nfrom rdflib import Graph\\nfrom pyshacl import validate\\n\\ndata_graph = Graph()\\ndata_graph.parse('$(EXAMPLE)', format='json-ld')\\nshape_graph = Graph()\\nshape_graph.parse('$(SHAPE_DIR)/measurement_request.ttl', format='turtle')\\nconforms, _, report = validate(data_graph, shacl_graph=shape_graph, inference='rdfs', abort_on_first=False, allow_infos=True, allow_warnings=True)\\nprint(('SHACL passed: ' if conforms else 'SHACL failed: ') + '$(SHAPE_DIR)/measurement_request.ttl')\\nif not conforms:\\n    print(report)\\nsys.exit(0 if conforms else 1)\")"
+	$(PYTHON) -c "exec(\"import sys\\nfrom rdflib import Graph\\nfrom pyshacl import validate\\n\\ndata_graph = Graph()\\ndata_graph.parse('$(EXAMPLE)', format='json-ld')\\nshape_graph = Graph()\\nshape_graph.parse('$(SHAPE_DIR)/request_measurement.ttl', format='turtle')\\nconforms, _, report = validate(data_graph, shacl_graph=shape_graph, inference='rdfs', abort_on_first=False, allow_infos=True, allow_warnings=True)\\nprint(('SHACL passed: ' if conforms else 'SHACL failed: ') + '$(SHAPE_DIR)/request_measurement.ttl')\\nif not conforms:\\n    print(report)\\nsys.exit(0 if conforms else 1)\")"
 
 validate-shacl-workflow:
 	@echo "--> Validating SHACL..."
-	$(PYTHON) -c "exec(\"import sys\\nfrom rdflib import Graph\\nfrom pyshacl import validate\\n\\ndata_graph = Graph()\\ndata_graph.parse('$(WORKFLOW_EXAMPLE)', format='json-ld')\\nshape_graph = Graph()\\nshape_graph.parse('$(SHAPE_DIR)/workflow_launch.ttl', format='turtle')\\nconforms, _, report = validate(data_graph, shacl_graph=shape_graph, inference='rdfs', abort_on_first=False, allow_infos=True, allow_warnings=True)\\nprint(('SHACL passed: ' if conforms else 'SHACL failed: ') + '$(SHAPE_DIR)/workflow_launch.ttl')\\nif not conforms:\\n    print(report)\\nsys.exit(0 if conforms else 1)\")"
+	$(PYTHON) -c "exec(\"import sys\\nfrom rdflib import Graph\\nfrom pyshacl import validate\\n\\ndata_graph = Graph()\\ndata_graph.parse('$(WORKFLOW_EXAMPLE)', format='json-ld')\\nshape_graph = Graph()\\nshape_graph.parse('$(SHAPE_DIR)/launch_workflow.ttl', format='turtle')\\nconforms, _, report = validate(data_graph, shacl_graph=shape_graph, inference='rdfs', abort_on_first=False, allow_infos=True, allow_warnings=True)\\nprint(('SHACL passed: ' if conforms else 'SHACL failed: ') + '$(SHAPE_DIR)/launch_workflow.ttl')\\nif not conforms:\\n    print(report)\\nsys.exit(0 if conforms else 1)\")"
 
 test:
 	@echo "--> Running Python Unit Tests..."
